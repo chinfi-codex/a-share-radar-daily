@@ -79,22 +79,23 @@ function render(){
   const kw=$('keywordInput').value.trim();
   const ann=currentData.announcement||{}, rel=currentData.institutionalResearch||{}, p5w=currentData.interactions||{};
   setKpi('kDate', currentData.date||$('dateInput').value||'-');
-  setKpi('kAnn', ann.ok ? (ann.items||[]).length : 0);
+  setKpi('kAnn', ann.ok ? (ann.items||[]).filter(x=>x.primaryLabel!=='其他').length : 0);
   setKpi('kRel', rel.ok ? (rel.items||[]).length : 0);
   setKpi('kP5w', p5w.ok ? (p5w.items||[]).length : 0);
 
   if(!ann.ok){$('annStats').innerHTML=`<div class='status err'>暂无数据/抓取失败：${esc(ann.error||'未知')}</div>`;$('annList').innerHTML='';}
   else {
-    const stats=ann.stats||{};
+    const statsRaw=ann.stats||{};
+    const stats=Object.fromEntries(Object.entries(statsRaw).filter(([k])=>k!=='其他'));
     $('annStats').innerHTML=Object.keys(stats).length?Object.entries(stats).map(([k,v])=>`<span class='tag'>${esc(k)}：${v}</span>`).join(''):'<div class="empty">暂无统计</div>';
-    const items=(ann.items||[]).filter(x=>matchKey(x,kw));
-    $('annList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>分类</th><th>标题</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.announcementTime)}</td><td>${esc(x.secCode)}</td><td>${esc(x.secName)}</td><td>${esc(x.primaryLabel||'')}</td><td>${esc(x.announcementTitle||'')}</td></tr>`).join('')}</tbody></table>`;
+    const items=(ann.items||[]).filter(x=>x.primaryLabel!=='其他').filter(x=>matchKey(x,kw));
+    $('annList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>分类</th><th>标题</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.announcementTime)}</td><td>${esc(x.secCode)}</td><td>${esc(x.secName)}</td><td>${esc(x.primaryLabel||'')}</td><td><a href='${esc(x.adjunctUrl||'#')}' target='_blank' rel='noopener noreferrer'>${esc(x.announcementTitle||'')}</a></td></tr>`).join('')}</tbody></table>`;
   }
 
   if(!rel.ok){$('relList').innerHTML=`<div class='status err'>暂无数据/抓取失败：${esc(rel.error||'未知')}</div>`;}
   else {
     const items=(rel.items||[]).filter(x=>matchKey(x,kw));
-    $('relList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>标题</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.announcementTime)}</td><td>${esc(x.secCode)}</td><td>${esc(x.secName)}</td><td>${esc(x.announcementTitle||'')}</td></tr>`).join('')}</tbody></table>`;
+    $('relList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>标题</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.announcementTime)}</td><td>${esc(x.secCode)}</td><td>${esc(x.secName)}</td><td><a href='${esc(x.adjunctUrl||'#')}' target='_blank' rel='noopener noreferrer'>${esc(x.announcementTitle||'')}</a></td></tr>`).join('')}</tbody></table>`;
   }
 
   if(!p5w.ok){$('p5wList').innerHTML=`<div class='status err'>暂无数据/抓取失败：${esc(p5w.error||'未知')}</div>`;}
