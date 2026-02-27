@@ -15,7 +15,7 @@
     input:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe}
     button{background:var(--pri);color:#fff;border:none;cursor:pointer;font-weight:600}
     button:hover{opacity:.95}
-    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}
     .kpi{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px}
     .kpi .k{font-size:12px;color:var(--muted)} .kpi .v{font-size:22px;font-weight:700;margin-top:4px}
     .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 4px 16px rgba(15,23,42,.03)}
@@ -47,6 +47,7 @@
     <div class="kpi"><div class="k">公告总数</div><div class="v" id="kAnn">-</div></div>
     <div class="kpi"><div class="k">机构调研</div><div class="v" id="kRel">-</div></div>
     <div class="kpi"><div class="k">互动问答</div><div class="v" id="kP5w">-</div></div>
+    <div class="kpi"><div class="k">业绩预告</div><div class="v" id="kFc">-</div></div>
     <div class="kpi"><div class="k">当前日期</div><div class="v" id="kDate" style="font-size:18px">-</div></div>
   </div>
 
@@ -63,6 +64,10 @@
     <h3>💬 C. 互动问答明细（p5w）</h3>
     <div id="p5wList"></div>
   </div>
+  <div class="card">
+    <h3>📈 D. 业绩预告（Tushare）</h3>
+    <div id="fcList"></div>
+  </div>
 </div>
 
 <script>
@@ -77,11 +82,12 @@ function setKpi(id,v){$(id).textContent=v??'-'}
 function render(){
   if(!currentData) return;
   const kw=$('keywordInput').value.trim();
-  const ann=currentData.announcement||{}, rel=currentData.institutionalResearch||{}, p5w=currentData.interactions||{};
+  const ann=currentData.announcement||{}, rel=currentData.institutionalResearch||{}, p5w=currentData.interactions||{}, fc=currentData.earningsForecast||{};
   setKpi('kDate', currentData.date||$('dateInput').value||'-');
   setKpi('kAnn', ann.ok ? (ann.items||[]).filter(x=>x.primaryLabel!=='其他').length : 0);
   setKpi('kRel', rel.ok ? (rel.items||[]).length : 0);
   setKpi('kP5w', p5w.ok ? (p5w.items||[]).length : 0);
+  setKpi('kFc', fc.ok ? (fc.items||[]).length : 0);
 
   if(!ann.ok){$('annStats').innerHTML=`<div class='status err'>暂无数据/抓取失败：${esc(ann.error||'未知')}</div>`;$('annList').innerHTML='';}
   else {
@@ -133,6 +139,12 @@ function render(){
     const items=(p5w.items||[]).filter(x=>matchKey(x,kw));
     $('p5wList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>回复时间</th><th>代码</th><th>名称</th><th>问题</th><th>回复</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.replyerTimeStr||x.questionerTimeStr||'')}</td><td>${esc(x.companyCode||'')}</td><td>${esc(x.companyShortname||'')}</td><td>${esc((x.content||'').slice(0,120))}</td><td>${esc((x.replyContent||'').slice(0,120))}</td></tr>`).join('')}</tbody></table>`;
   }
+
+  if(!fc.ok){$('fcList').innerHTML=`<div class='status err'>暂无数据/抓取失败：${esc(fc.error||'未知')}</div>`;}
+  else {
+    const items=(fc.items||[]).filter(x=>matchKey({secCode:x.symbol,secName:x.company},kw));
+    $('fcList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>公告日</th><th>代码</th><th>名称</th><th>类型</th><th>变动幅度%</th><th>摘要</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.ann_date||'')}</td><td>${esc(x.symbol||'')}</td><td>${esc(x.company||'')}</td><td>${esc(x.type||'')}</td><td>${esc((x.p_change_min??'-'))} ~ ${esc((x.p_change_max??'-'))}</td><td>${esc((x.summary||x.change_reason||'').slice(0,160))}</td></tr>`).join('')}</tbody></table>`;
+  }
 }
 
 async function loadByDate(date){
@@ -146,8 +158,8 @@ async function loadByDate(date){
   }catch(e){
     currentData=null;
     setStatus(`加载失败：${e.message}。可改选已有日期或手动导入 JSON。`,'err');
-    $('annStats').innerHTML=''; $('annList').innerHTML=''; $('relList').innerHTML=''; $('p5wList').innerHTML='';
-    setKpi('kAnn','-'); setKpi('kRel','-'); setKpi('kP5w','-');
+    $('annStats').innerHTML=''; $('annList').innerHTML=''; $('relList').innerHTML=''; $('p5wList').innerHTML=''; $('fcList').innerHTML='';
+    setKpi('kAnn','-'); setKpi('kRel','-'); setKpi('kP5w','-'); setKpi('kFc','-');
   }
 }
 
