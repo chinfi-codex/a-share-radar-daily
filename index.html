@@ -89,7 +89,37 @@ function render(){
     const stats=Object.fromEntries(Object.entries(statsRaw).filter(([k])=>k!=='其他'));
     $('annStats').innerHTML=Object.keys(stats).length?Object.entries(stats).map(([k,v])=>`<span class='tag'>${esc(k)}：${v}</span>`).join(''):'<div class="empty">暂无统计</div>';
     const items=(ann.items||[]).filter(x=>x.primaryLabel!=='其他').filter(x=>matchKey(x,kw));
-    $('annList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>分类</th><th>标题</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.announcementTime)}</td><td>${esc(x.secCode)}</td><td>${esc(x.secName)}</td><td>${esc(x.primaryLabel||'')}</td><td><a href='${esc(x.adjunctUrl||'#')}' target='_blank' rel='noopener noreferrer'>${esc(x.announcementTitle||'')}</a></td></tr>`).join('')}</tbody></table>`;
+    if(!items.length){
+      $('annList').innerHTML='<div class="empty">暂无数据</div>';
+    }else{
+      const byLabel = {};
+      for(const it of items){
+        const lb = it.primaryLabel || '未分类';
+        if(!byLabel[lb]) byLabel[lb]=[];
+        byLabel[lb].push(it);
+      }
+      const labelOrder = Object.keys(byLabel).sort((a,b)=> (stats[b]||0)-(stats[a]||0));
+      let html = '';
+      for(const lb of labelOrder){
+        const arr = byLabel[lb];
+        const byCompany = {};
+        for(const it of arr){
+          const ck = `${it.secCode||''}|${it.secName||''}`;
+          if(!byCompany[ck]) byCompany[ck] = {secCode:it.secCode||'', secName:it.secName||'', items:[]};
+          byCompany[ck].items.push(it);
+        }
+        const companies = Object.values(byCompany).sort((a,b)=>b.items.length-a.items.length);
+        html += `<div style='margin:12px 0 8px;font-weight:700'>📂 ${esc(lb)}（${arr.length}）</div>`;
+        html += companies.map(c=>{
+          const rows = c.items.map(x=>`<li><a href='${esc(x.adjunctUrl||'#')}' target='_blank' rel='noopener noreferrer'>${esc(x.announcementTitle||'')}</a> <span class='muted'>(${esc(x.announcementTime||'')})</span></li>`).join('');
+          return `<div style='padding:8px 10px;border:1px solid #eef2f7;border-radius:10px;margin-bottom:8px'>
+            <div style='font-weight:600;margin-bottom:6px'>${esc(c.secCode)} ${esc(c.secName)} <span class='tag'>${c.items.length}条</span></div>
+            <ul style='margin:0;padding-left:18px'>${rows}</ul>
+          </div>`;
+        }).join('');
+      }
+      $('annList').innerHTML = html;
+    }
   }
 
   if(!rel.ok){$('relList').innerHTML=`<div class='status err'>暂无数据/抓取失败：${esc(rel.error||'未知')}</div>`;}
