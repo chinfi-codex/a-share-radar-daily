@@ -3,158 +3,148 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>A股公告雷达（按日期）</title>
+  <title>A股公告雷达</title>
   <style>
-    body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif; margin: 20px; color: #1f2937; }
-    h1 { margin: 0 0 16px; }
-    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
-    input, button { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; }
-    button { background: #111827; color: #fff; cursor: pointer; }
-    .hint { color: #6b7280; font-size: 13px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-    .error { color: #b91c1c; }
-    .muted { color: #6b7280; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; vertical-align: top; font-size: 13px; }
-    .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: #eef2ff; margin-right: 6px; font-size: 12px; }
+    :root{--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--pri:#2563eb;--ok:#059669;--err:#dc2626;--bd:#e5e7eb}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#eef2ff 0,#f8fafc 40%,#f5f7fb 100%);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--text)}
+    .wrap{max-width:1200px;margin:20px auto;padding:0 14px}
+    .hero{background:rgba(255,255,255,.8);backdrop-filter: blur(8px);border:1px solid var(--bd);border-radius:16px;padding:18px 18px 12px;box-shadow:0 8px 24px rgba(15,23,42,.05)}
+    h1{margin:0 0 10px;font-size:22px}.sub{color:var(--muted);font-size:13px}
+    .toolbar{display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;margin-top:14px}
+    input,button{height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);font-size:14px}
+    input:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe}
+    button{background:var(--pri);color:#fff;border:none;cursor:pointer;font-weight:600}
+    button:hover{opacity:.95}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+    .kpi{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px}
+    .kpi .k{font-size:12px;color:var(--muted)} .kpi .v{font-size:22px;font-weight:700;margin-top:4px}
+    .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 4px 16px rgba(15,23,42,.03)}
+    h3{margin:0 0 10px;font-size:16px}
+    .tag{display:inline-block;padding:2px 8px;border-radius:999px;background:#eff6ff;color:#1d4ed8;margin:0 6px 6px 0;font-size:12px}
+    .status{font-size:13px;color:var(--muted)} .status.err{color:var(--err)} .status.ok{color:var(--ok)}
+    table{width:100%;border-collapse:collapse} th,td{border-bottom:1px solid #f1f5f9;padding:8px;text-align:left;vertical-align:top;font-size:13px}
+    th{color:#475569;font-weight:600;background:#fafafa}
+    .empty{color:var(--muted);font-size:13px}
+    @media (max-width: 980px){.toolbar{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}}
+    @media (max-width: 640px){.toolbar{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <h1>A股公告雷达（按日期）</h1>
-  <div class="toolbar">
-    <label>日期：<input id="dateInput" type="date" /></label>
-    <label>代码/名称筛选：<input id="keywordInput" type="text" placeholder="如 600519 / 贵州茅台" /></label>
-    <button id="loadBtn">加载</button>
-    <input id="fileInput" type="file" accept="application/json" />
+<div class="wrap">
+  <div class="hero">
+    <h1>📡 A股公告雷达（按日期）</h1>
+    <div class="sub">整合：公告分类 + 机构调研 + 互动问答</div>
+    <div class="toolbar">
+      <input id="dateInput" type="date" />
+      <input id="keywordInput" type="text" placeholder="筛选代码/名称，如 600519 / 茅台" />
+      <button id="loadBtn">加载日期</button>
+      <input id="fileInput" type="file" accept="application/json" />
+    </div>
+    <div id="status" class="status" style="margin-top:10px">正在初始化…</div>
   </div>
-  <div class="hint">默认加载 ./YYYY-MM-DD.json。若浏览器限制 file:// 读取，请用“选择JSON文件”或在该目录启动本地静态服务。</div>
 
-  <div id="status" class="card muted">等待加载数据...</div>
+  <div class="stats">
+    <div class="kpi"><div class="k">公告总数</div><div class="v" id="kAnn">-</div></div>
+    <div class="kpi"><div class="k">机构调研</div><div class="v" id="kRel">-</div></div>
+    <div class="kpi"><div class="k">互动问答</div><div class="v" id="kP5w">-</div></div>
+    <div class="kpi"><div class="k">当前日期</div><div class="v" id="kDate" style="font-size:18px">-</div></div>
+  </div>
 
   <div class="card">
-    <h3>A. 公告分类统计 + 明细</h3>
+    <h3>🧭 A. 公告分类统计 + 明细</h3>
     <div id="annStats"></div>
     <div id="annList"></div>
   </div>
-
   <div class="card">
-    <h3>B. 机构调研明细（cninfo relation）</h3>
+    <h3>🏢 B. 机构调研明细（cninfo relation）</h3>
     <div id="relList"></div>
   </div>
-
   <div class="card">
-    <h3>C. 互动问答明细（p5w getNewSearchR）</h3>
+    <h3>💬 C. 互动问答明细（p5w）</h3>
     <div id="p5wList"></div>
   </div>
+</div>
 
-  <script>
-    let currentData = null;
+<script>
+let currentData=null;
+let availableDates=[];
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const $=id=>document.getElementById(id);
+const matchKey=(item,kw)=>!kw||[item.secCode,item.secName,item.companyCode,item.companyShortname].join(' ').toLowerCase().includes(kw.toLowerCase());
+function setStatus(msg,type=''){const el=$('status');el.className='status '+type;el.textContent=msg;}
+function setKpi(id,v){$(id).textContent=v??'-'}
 
-    function esc(s) {
-      return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
+function render(){
+  if(!currentData) return;
+  const kw=$('keywordInput').value.trim();
+  const ann=currentData.announcement||{}, rel=currentData.institutionalResearch||{}, p5w=currentData.interactions||{};
+  setKpi('kDate', currentData.date||$('dateInput').value||'-');
+  setKpi('kAnn', ann.ok ? (ann.items||[]).length : 0);
+  setKpi('kRel', rel.ok ? (rel.items||[]).length : 0);
+  setKpi('kP5w', p5w.ok ? (p5w.items||[]).length : 0);
 
-    function matchKey(item, kw) {
-      if (!kw) return true;
-      const k = kw.toLowerCase();
-      const t = [item.secCode, item.secName, item.companyCode, item.companyShortname].join(' ').toLowerCase();
-      return t.includes(k);
-    }
+  if(!ann.ok){$('annStats').innerHTML=`<div class='status err'>暂无数据/抓取失败：${esc(ann.error||'未知')}</div>`;$('annList').innerHTML='';}
+  else {
+    const stats=ann.stats||{};
+    $('annStats').innerHTML=Object.keys(stats).length?Object.entries(stats).map(([k,v])=>`<span class='tag'>${esc(k)}：${v}</span>`).join(''):'<div class="empty">暂无统计</div>';
+    const items=(ann.items||[]).filter(x=>matchKey(x,kw));
+    $('annList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>分类</th><th>标题</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.announcementTime)}</td><td>${esc(x.secCode)}</td><td>${esc(x.secName)}</td><td>${esc(x.primaryLabel||'')}</td><td>${esc(x.announcementTitle||'')}</td></tr>`).join('')}</tbody></table>`;
+  }
 
-    function setStatus(msg, isErr=false) {
-      const el = document.getElementById('status');
-      el.className = 'card ' + (isErr ? 'error' : 'muted');
-      el.textContent = msg;
-    }
+  if(!rel.ok){$('relList').innerHTML=`<div class='status err'>暂无数据/抓取失败：${esc(rel.error||'未知')}</div>`;}
+  else {
+    const items=(rel.items||[]).filter(x=>matchKey(x,kw));
+    $('relList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>标题</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.announcementTime)}</td><td>${esc(x.secCode)}</td><td>${esc(x.secName)}</td><td>${esc(x.announcementTitle||'')}</td></tr>`).join('')}</tbody></table>`;
+  }
 
-    function render() {
-      if (!currentData) return;
-      const kw = document.getElementById('keywordInput').value.trim();
+  if(!p5w.ok){$('p5wList').innerHTML=`<div class='status err'>暂无数据/抓取失败：${esc(p5w.error||'未知')}</div>`;}
+  else {
+    const items=(p5w.items||[]).filter(x=>matchKey(x,kw));
+    $('p5wList').innerHTML=!items.length?'<div class="empty">暂无数据</div>':`<table><thead><tr><th>回复时间</th><th>代码</th><th>名称</th><th>问题</th><th>回复</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.replyerTimeStr||x.questionerTimeStr||'')}</td><td>${esc(x.companyCode||'')}</td><td>${esc(x.companyShortname||'')}</td><td>${esc((x.content||'').slice(0,120))}</td><td>${esc((x.replyContent||'').slice(0,120))}</td></tr>`).join('')}</tbody></table>`;
+  }
+}
 
-      // A 公告
-      const ann = currentData.announcement || {};
-      const annStats = document.getElementById('annStats');
-      const annList = document.getElementById('annList');
-      if (!ann.ok) {
-        annStats.innerHTML = `<div class="error">暂无数据/抓取失败原因：${esc(ann.error || '未知错误')}</div>`;
-        annList.innerHTML = '';
-      } else {
-        const stats = ann.stats || {};
-        annStats.innerHTML = Object.keys(stats).length ? Object.entries(stats).map(([k,v]) => `<span class="tag">${esc(k)}: ${v}</span>`).join('') : '<span class="muted">暂无数据</span>';
-        const items = (ann.items || []).filter(x => matchKey(x, kw));
-        if (!items.length) {
-          annList.innerHTML = '<div class="muted">暂无数据</div>';
-        } else {
-          annList.innerHTML = `<table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>分类</th><th>标题</th></tr></thead><tbody>` +
-            items.map(x => `<tr><td>${esc(x.announcementTime)}</td><td>${esc(x.secCode)}</td><td>${esc(x.secName)}</td><td>${esc(x.primaryLabel || '')}</td><td>${esc(x.announcementTitle || '')}</td></tr>`).join('') +
-            '</tbody></table>';
-        }
-      }
+async function loadByDate(date){
+  if(!date){ setStatus('请选择日期','err'); return; }
+  try{
+    const r=await fetch(`./${date}.json?t=${Date.now()}`);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    currentData=await r.json();
+    setStatus(`已加载 ${date}.json`,'ok');
+    render();
+  }catch(e){
+    currentData=null;
+    setStatus(`加载失败：${e.message}。可改选已有日期或手动导入 JSON。`,'err');
+    $('annStats').innerHTML=''; $('annList').innerHTML=''; $('relList').innerHTML=''; $('p5wList').innerHTML='';
+    setKpi('kAnn','-'); setKpi('kRel','-'); setKpi('kP5w','-');
+  }
+}
 
-      // B relation
-      const rel = currentData.institutionalResearch || {};
-      const relList = document.getElementById('relList');
-      if (!rel.ok) {
-        relList.innerHTML = `<div class="error">暂无数据/抓取失败原因：${esc(rel.error || '未知错误')}</div>`;
-      } else {
-        const items = (rel.items || []).filter(x => matchKey(x, kw));
-        relList.innerHTML = !items.length ? '<div class="muted">暂无数据</div>' :
-          `<table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>标题</th></tr></thead><tbody>` +
-          items.map(x => `<tr><td>${esc(x.announcementTime)}</td><td>${esc(x.secCode)}</td><td>${esc(x.secName)}</td><td>${esc(x.announcementTitle)}</td></tr>`).join('') +
-          '</tbody></table>';
-      }
+async function initDates(){
+  try{
+    const r=await fetch('./dates.json?t='+Date.now());
+    if(!r.ok) throw new Error('no manifest');
+    const j=await r.json();
+    availableDates=(j.dates||[]);
+  }catch(_){availableDates=[];}
+  if(availableDates.length){
+    $('dateInput').value=availableDates[0];
+    setStatus(`已发现 ${availableDates.length} 个可用日期，默认加载最新 ${availableDates[0]}`);
+    await loadByDate(availableDates[0]);
+    return;
+  }
+  const t=new Date();
+  const y=t.getFullYear(),m=String(t.getMonth()+1).padStart(2,'0'),d=String(t.getDate()).padStart(2,'0');
+  const today=`${y}-${m}-${d}`;
+  $('dateInput').value=today;
+  setStatus('未发现日期清单，尝试加载今日数据…');
+  await loadByDate(today);
+}
 
-      // C p5w
-      const p5w = currentData.interactions || {};
-      const p5wList = document.getElementById('p5wList');
-      if (!p5w.ok) {
-        p5wList.innerHTML = `<div class="error">暂无数据/抓取失败原因：${esc(p5w.error || '未知错误')}</div>`;
-      } else {
-        const items = (p5w.items || []).filter(x => matchKey(x, kw));
-        p5wList.innerHTML = !items.length ? '<div class="muted">暂无数据</div>' :
-          `<table><thead><tr><th>回复时间</th><th>代码</th><th>名称</th><th>问题</th><th>回复</th></tr></thead><tbody>` +
-          items.map(x => `<tr><td>${esc(x.replyerTimeStr || x.questionerTimeStr)}</td><td>${esc(x.companyCode)}</td><td>${esc(x.companyShortname)}</td><td>${esc((x.content||'').slice(0,120))}</td><td>${esc((x.replyContent||'').slice(0,120))}</td></tr>`).join('') +
-          '</tbody></table>';
-      }
-    }
-
-    async function loadByDate() {
-      const date = document.getElementById('dateInput').value;
-      if (!date) return setStatus('请先选择日期', true);
-      try {
-        const resp = await fetch(`./${date}.json?t=${Date.now()}`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        currentData = await resp.json();
-        setStatus(`已加载 ${date}.json`);
-        render();
-      } catch (e) {
-        currentData = null;
-        setStatus(`自动加载失败：${e.message}。可使用“选择JSON文件”手动加载。`, true);
-        document.getElementById('annStats').innerHTML = '';
-        document.getElementById('annList').innerHTML = '';
-        document.getElementById('relList').innerHTML = '';
-        document.getElementById('p5wList').innerHTML = '';
-      }
-    }
-
-    document.getElementById('loadBtn').addEventListener('click', loadByDate);
-    document.getElementById('keywordInput').addEventListener('input', render);
-    document.getElementById('fileInput').addEventListener('change', async (e) => {
-      const f = e.target.files?.[0];
-      if (!f) return;
-      try {
-        const txt = await f.text();
-        currentData = JSON.parse(txt);
-        setStatus(`已加载文件：${f.name}`);
-        render();
-      } catch (err) {
-        setStatus(`文件解析失败：${err.message}`, true);
-      }
-    });
-
-    const today = new Date();
-    const y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
-    document.getElementById('dateInput').value = `${y}-${m}-${d}`;
-  </script>
+$('loadBtn').addEventListener('click',()=>loadByDate($('dateInput').value));
+$('keywordInput').addEventListener('input',render);
+$('fileInput').addEventListener('change',async e=>{const f=e.target.files?.[0]; if(!f) return; try{currentData=JSON.parse(await f.text()); setStatus(`已加载文件：${f.name}`,'ok'); render();}catch(err){setStatus(`文件解析失败：${err.message}`,'err');}});
+initDates();
+</script>
 </body>
 </html>
